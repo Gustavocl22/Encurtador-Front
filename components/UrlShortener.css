@@ -195,7 +195,6 @@ h2 {
   font-weight: 500;
 }
 
-/* Estilo para link encurtado */
 .short-url-link {
   color: #b3cdf6;
   text-decoration: none;
@@ -209,13 +208,11 @@ h2 {
   text-decoration: underline;
 }
 
-/* Centralização das células de cliques e ações */
 .centered {
   text-align: center;
   vertical-align: middle;
 }
 
-/* Ícone de deletar */
 .delete-icon {
   margin-right: 4px;
   vertical-align: middle;
@@ -248,6 +245,10 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.url-table td.centered {
+  color: #fff;
 }
 
 @media (max-width: 600px) {
