@@ -23,7 +23,7 @@ const UrlShortenerForm: React.FC = () => {
   const itemsPerPage = 5;
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
-  const API_KEY = import.meta.env.VITE_X_API_KEY;
+  const API_KEY = import.meta.env.X_API_KEY;
 
   useEffect(() => {
     fetchUrls();
