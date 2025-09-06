@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import './UrlShortener.css';
 
-
 interface UrlShortener {
   id: number;
   originalUrl: string;
   shortenedUrl: string;
   clicks: number;
+  createdAt: string;
 }
 
 const UrlShortenerForm: React.FC = () => {
@@ -16,8 +16,14 @@ const UrlShortenerForm: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<keyof UrlShortener>("id");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const itemsPerPage = 5;
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
+  const API_KEY = import.meta.env.VITE_X_API_KEY;
 
   useEffect(() => {
     fetchUrls();
@@ -25,10 +31,15 @@ const UrlShortenerForm: React.FC = () => {
 
   const fetchUrls = async () => {
     try {
-      const response = await axios.get(API_BASE_URL);
+      setLoading(true);
+      const response = await axios.get(API_BASE_URL, {
+        headers: { 'X-API-KEY': API_KEY }
+      });
       setShortenedUrls(response.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao buscar URLs. Verifique sua conexão.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,25 +48,38 @@ const UrlShortenerForm: React.FC = () => {
     setError("");
     setSuccess("");
 
-    // Validação básica de URL
-    if (!/^https?:\/\/.+\..+/.test(originalUrl)) {
-      setError("Insira uma URL válida (ex: https://...)");
+    // Validação melhorada de URL
+    try {
+      new URL(originalUrl);
+    } catch (_) {
+      setError("Insira uma URL válida (ex: https://exemplo.com)");
       return;
     }
 
     try {
-      await axios.post(API_BASE_URL, { originalUrl });
+      setLoading(true);
+      await axios.post(API_BASE_URL, { originalUrl }, {
+        headers: { 'X-API-KEY': API_KEY }
+      });
       setOriginalUrl("");
       setSuccess("URL encurtada com sucesso!");
       fetchUrls();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja excluir esta URL encurtada?")) {
+      return;
+    }
+
     try {
-      await axios.delete(`${API_BASE_URL}/${id}`);
+      await axios.delete(`${API_BASE_URL}/${id}`, {
+        headers: { 'X-API-KEY': API_KEY }
+      });
       setSuccess("URL deletada com sucesso!");
       fetchUrls();
     } catch (err: any) {
@@ -63,102 +87,230 @@ const UrlShortenerForm: React.FC = () => {
     }
   };
 
+  const handleSort = (field: keyof UrlShortener) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const sortedUrls = [...shortenedUrls].sort((a, b) => {
+    if (a[sortField] < b[sortField]) return sortDirection === "asc" ? -1 : 1;
+    if (a[sortField] > b[sortField]) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Paginação
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUrls = sortedUrls.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedUrls.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  const SortIcon: React.FC<{ field: keyof UrlShortener }> = ({ field }) => {
+    if (sortField !== field) return <span>↕️</span>;
+    return sortDirection === "asc" ? <span>⬆️</span> : <span>⬇️</span>;
+  };
+
   return (
-    <>
-      <div className="encurtador-container">
-        <h1>Encurtador de URLs</h1>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Coloque sua URL..."
-            value={originalUrl}
-            onChange={(e) => setOriginalUrl(e.target.value)}
-            aria-label="Campo para inserir URL"
-          />
-          <button type="submit" aria-label="Encurtar URL">
-            <span role="img" aria-label="link">🔗</span> Encurtar URL
-          </button>
+    <div className="encurtador-container">
+      <div className="card">
+        <h1>🔗 Encurtador de URLs</h1>
+        <p className="subtitle">Encurte seus links longos de forma rápida e fácil</p>
+
+        <form onSubmit={handleSubmit} className="url-form">
+          <div className="input-group">
+            <input
+              type="text"
+              placeholder="https://exemplo.com/url-muito-longa..."
+              value={originalUrl}
+              onChange={(e) => setOriginalUrl(e.target.value)}
+              aria-label="Campo para inserir URL"
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              aria-label="Encurtar URL"
+              disabled={loading || !originalUrl}
+              className={loading ? "loading" : ""}
+            >
+              {loading ? "⏳" : "🔗"} {loading ? "Encurtando..." : "Encurtar URL"}
+            </button>
+          </div>
         </form>
 
-        {error && <p className="error-message">{error}</p>}
-        {success && <p className="success-message">{success}</p>}
+        {error && (
+          <div className="message error-message">
+            <span>⚠️</span> {error}
+          </div>
+        )}
+        {success && (
+          <div className="message success-message">
+            <span>✅</span> {success}
+          </div>
+        )}
 
-        <hr />
+        <div className="divider"></div>
 
-        <h2>URLs Encurtadas</h2>
-        <table className="url-table">
-          <thead>
-            <tr>
-              <th>Original</th>
-              <th>Encurtada</th>
-              <th>Cliques</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shortenedUrls.map(url => (
-              <tr key={url.id}>
-                <td>
-                  <a href={url.originalUrl} target="_blank" rel="noopener noreferrer">
-                    {url.originalUrl.length > 30
-                      ? url.originalUrl.slice(0, 30) + "..."
-                      : url.originalUrl}
-                  </a>
-                </td>
-                <td className="flex-row">
-                  <a
-                    href={`${API_BASE_URL}/${url.shortenedUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="short-url-link"
-                  >
-                    Shortener/{url.shortenedUrl}
-                  </a>
+        <div className="table-header">
+          <h2>Suas URLs Encurtadas</h2>
+          {shortenedUrls.length > 0 && (
+            <div className="table-controls">
+              <span className="results-count">{shortenedUrls.length} resultado(s)</span>
+              <button onClick={fetchUrls} className="refresh-btn" title="Atualizar lista">
+                🔄
+              </button>
+            </div>
+          )}
+        </div>
+
+        {loading && shortenedUrls.length === 0 ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Carregando URLs...</p>
+          </div>
+        ) : shortenedUrls.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">🔗</div>
+            <h3>Nenhuma URL encurtada ainda</h3>
+            <p>Encurte sua primeira URL usando o campo acima!</p>
+          </div>
+        ) : (
+          <>
+            <div className="table-container">
+              <table className="url-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => handleSort("originalUrl")}>
+                      <div className="th-content">
+                        URL Original <SortIcon field="originalUrl" />
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort("shortenedUrl")}>
+                      <div className="th-content">
+                        URL Encurtada <SortIcon field="shortenedUrl" />
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort("clicks")}>
+                      <div className="th-content">
+                        Cliques <SortIcon field="clicks" />
+                      </div>
+                    </th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentUrls.map(url => (
+                    <tr key={url.id}>
+                      <td>
+                        <a
+                          href={url.originalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="original-url"
+                          title={url.originalUrl}
+                        >
+                          {url.originalUrl.replace(/^https?:\/\//, '').replace('www.', '')}
+                        </a>
+                      </td>
+                      <td>
+                        <div className="short-url-container">
+                          <a
+                            href={`${API_BASE_URL}/${url.shortenedUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="short-url-link"
+                            title={`${API_BASE_URL}/${url.shortenedUrl}`}
+                          >
+                            {url.shortenedUrl}
+                          </a>
+                          <button
+                            className="icon-btn copy-btn"
+                            title="Copiar link"
+                            aria-label="Copiar link encurtado"
+                            onClick={() => {
+                              const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
+                              navigator.clipboard.writeText(shareUrl);
+                              setCopiedId(url.id);
+                              setTimeout(() => setCopiedId(null), 1500);
+                            }}
+                          >
+                            {copiedId === url.id ? '✅' : '📋'}
+                          </button>
+                          {navigator.share && (
+                            <button
+                              className="icon-btn share-btn"
+                              title="Compartilhar link"
+                              aria-label="Compartilhar link encurtado"
+                              onClick={() => {
+                                const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
+                                navigator.share({
+                                  title: "Link encurtado",
+                                  text: "Confira este link encurtado:",
+                                  url: shareUrl,
+                                });
+                              }}
+                            >
+                              ↗️
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="clicks-count">{url.clicks}</span>
+                      </td>
+                      <td>
+                        <button
+                          className="icon-btn delete-btn"
+                          aria-label="Deletar URL"
+                          title="Excluir URL"
+                          onClick={() => handleDelete(url.id)}
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  &laquo;
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
-                    className="share-btn"
-                    title="Compartilhar link"
-                    aria-label="Compartilhar link encurtado"
-                    onClick={() => {
-                      const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
-                      if (navigator.share) {
-                        navigator.share({
-                          title: "Veja este link encurtado!",
-                          text: "Confira este link encurtado:",
-                          url: shareUrl,
-                        });
-                      } else {
-                        navigator.clipboard.writeText(shareUrl);
-                        setCopiedId(url.id);
-                        setTimeout(() => setCopiedId(null), 1500);
-                      }
-                    }}
+                    key={page}
+                    onClick={() => paginate(page)}
+                    className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
                   >
-                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                      <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5084C1"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z" /></svg>
-                    </svg>
+                    {page}
                   </button>
-                  {copiedId === url.id && (
-                    <span className="copied-msg">Copiado!</span>
-                  )}
-                </td>
-                <td className="centered">{url.clicks}</td>
-                <td className="centered">
-                  <button
-                    className="delete"
-                    aria-label="Deletar URL"
-                    onClick={() => handleDelete(url.id)}
-                  >
-                    <svg width="18" height="18" fill="currentColor" className="delete-icon" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm2 3h14v13H5V9zm3 2v9h2v-9H8zm4 0v9h2v-9h-2z" /></svg>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                ))}
+
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  &raquo;
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-    </>
+    </div>
   );
 };
 
