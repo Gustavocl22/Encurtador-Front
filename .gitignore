@@ -1,4 +1,21 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+
+# Arquivos de ambiente
+.env
 .env.local
 .env.production
-node_modules
+.env.development
+
+# Logs
+*.log
+
+# Cache do editor
+.vscode/
+.idea/
+.DS_Store
 
