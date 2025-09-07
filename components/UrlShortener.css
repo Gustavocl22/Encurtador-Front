@@ -414,55 +414,7 @@ h1 {
   z-index: 100;
   box-shadow: var(--shadow);
 }
-/* Edição inline */
-.editing-row {
-  background: #f3f6ff;
-}
 
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.edit-fields {
-  display: flex;
-  gap: 10px;
-}
-
-.edit-input {
-  flex: 1;
-  padding: 10px 14px;
-  border: 2px solid var(--primary);
-  border-radius: var(--radius);
-  font-size: 1rem;
-  background: var(--card-bg);
-  color: var(--text);
-  outline: none;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.save-btn {
-  background: var(--success);
-  color: white;
-}
-
-.save-btn:hover {
-  background: #218838;
-}
-
-.cancel-btn {
-  background: var(--error);
-  color: white;
-}
-
-.cancel-btn:hover {
-  background: #b21f2d;
-}
 
 /* Responsividade */
 @media (max-width: 768px) {
