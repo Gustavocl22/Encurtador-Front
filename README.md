@@ -2,7 +2,7 @@
 
 🔗 Acesse o encurtador online: [https://encurtador-front-eta.vercel.app](https://encurtador-front-eta.vercel.app)
 
-Este projeto é um **Encurtador de URLs** desenvolvido em React + Vite, com integração a uma API ASP.NET protegida por API Key. Permite criar, visualizar, compartilhar e deletar links encurtados, além de acompanhar o número de cliques em cada link.
+Este projeto é um **Encurtador de URLs** desenvolvido em React + Vite, com integração a uma API ASP.NET. Permite criar, visualizar, compartilhar e deletar links encurtados, além de acompanhar o número de cliques em cada link.
 
 ---
 
@@ -47,7 +47,7 @@ Este projeto é um **Encurtador de URLs** desenvolvido em React + Vite, com inte
    VITE_API_URL=https://encurtarurl.onrender.com/api/urlshortener
 
    ```
-   > Substitua `sua-chave-aqui` pela chave configurada no backend.
+
 
 4. **Inicie o projeto:**
    ```bash
@@ -95,6 +95,19 @@ Siga este passo a passo para publicar seu próprio encurtador no GitHub Pages:
 
 ---
 
+## 🚀 Como fazer o deploy no Vercel
+
+Se preferir, você pode publicar seu encurtador gratuitamente no [Vercel](https://vercel.com/):
+
+1. Crie uma conta em https://vercel.com/ (pode usar GitHub para login rápido).
+2. Importe este repositório para o Vercel (botão "New Project").
+3. Siga os passos na tela e clique em "Deploy".
+4. Após alguns segundos, seu site estará disponível em uma URL do tipo `https://seu-projeto.vercel.app`.
+
+> Não é necessário configurar nada extra para projetos React + Vite. O Vercel detecta automaticamente e faz o build.
+
+---
+
 ## 📁 Estrutura dos arquivos principais
 
 - `components/UrlShortener.tsx`: Componente principal do frontend, responsável por toda a lógica de encurtamento, listagem, deleção e compartilhamento de URLs.
@@ -103,13 +116,5 @@ Siga este passo a passo para publicar seu próprio encurtador no GitHub Pages:
 - `vite.config.js`: Configuração do Vite, incluindo o campo `base` para deploy.
 
 ---
-
-## 🔒 Segurança
-
-- A chave da API é lida das variáveis de ambiente do Vite.
-- O backend ASP.NET valida a chave em todas as rotas protegidas.
-
----
-
 
 Desenvolvido por [Gustavo Catucci](https://github.com/Gustavocl22)
