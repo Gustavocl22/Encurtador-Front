@@ -22,7 +22,7 @@ const UrlShortenerForm: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const itemsPerPage = 5;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
 
   useEffect(() => {
     fetchUrls();
@@ -31,8 +31,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
   const fetchUrls = async () => {
     try {
       setLoading(true);
-  const response = await axios.get(API_BASE_URL);
-  setShortenedUrls(response.data);
+      const response = await axios.get(API_BASE_URL);
+      setShortenedUrls(response.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao buscar URLs. Verifique sua conexão.");
     } finally {
@@ -45,7 +45,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
     setError("");
     setSuccess("");
 
-    // Validação melhorada de URL
     try {
       new URL(originalUrl);
     } catch (_) {
@@ -55,10 +54,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
 
     try {
       setLoading(true);
-  await axios.post(API_BASE_URL, { originalUrl });
-  setOriginalUrl("");
-  setSuccess("URL encurtada com sucesso!");
-  fetchUrls();
+      await axios.post(API_BASE_URL, { originalUrl });
+      setOriginalUrl("");
+      setSuccess("URL encurtada com sucesso!");
+      fetchUrls();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
     } finally {
@@ -72,9 +71,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
     }
 
     try {
-  await axios.delete(`${API_BASE_URL}/${id}`);
-  setSuccess("URL deletada com sucesso!");
-  fetchUrls();
+      await axios.delete(`${API_BASE_URL}/${id}`);
+      setSuccess("URL deletada com sucesso!");
+      fetchUrls();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao deletar a URL. Atualize a página e tente novamente.");
     }
@@ -106,6 +105,58 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
   const SortIcon: React.FC<{ field: keyof UrlShortener }> = ({ field }) => {
     if (sortField !== field) return <span>↕️</span>;
     return sortDirection === "asc" ? <span>⬆️</span> : <span>⬇️</span>;
+  };
+
+  // --- EDIÇÃO ---
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editOriginalUrl, setEditOriginalUrl] = useState("");
+  const [editShortenedUrl, setEditShortenedUrl] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+
+  const startEdit = (url: UrlShortener) => {
+    setEditingId(url.id);
+    setEditOriginalUrl(url.originalUrl);
+    setEditShortenedUrl(url.shortenedUrl);
+    setError("");
+    setSuccess("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditOriginalUrl("");
+    setEditShortenedUrl("");
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!editOriginalUrl.trim() || !editShortenedUrl.trim()) {
+      setError("Preencha todos os campos para editar.");
+      return;
+    }
+    try {
+      new URL(editOriginalUrl);
+    } catch (_) {
+      setError("Insira uma URL válida (ex: https://exemplo.com)");
+      return;
+    }
+    try {
+      setEditLoading(true);
+      await axios.put(`${API_BASE_URL}/${editingId}`, {
+        originalUrl: editOriginalUrl,
+        shortenedUrl: editShortenedUrl
+      });
+      setSuccess("URL editada com sucesso!");
+      setEditingId(null);
+      setEditOriginalUrl("");
+      setEditShortenedUrl("");
+      fetchUrls();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Erro ao editar a URL. Tente novamente.");
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   return (
@@ -197,75 +248,118 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
                 </thead>
                 <tbody>
                   {currentUrls.map(url => (
-                    <tr key={url.id}>
-                      <td>
-                        <a
-                          href={url.originalUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="original-url"
-                          title={url.originalUrl}
-                        >
-                          {url.originalUrl.replace(/^https?:\/\//, '').replace('www.', '')}
-                        </a>
-                      </td>
-                      <td>
-                        <div className="short-url-container">
+                    editingId === url.id ? (
+                      <tr key={url.id} className="editing-row">
+                        <td colSpan={4}>
+                          <form onSubmit={handleEditSubmit} className="edit-form">
+                            <div className="edit-fields">
+                              <input
+                                type="text"
+                                value={editOriginalUrl}
+                                onChange={e => setEditOriginalUrl(e.target.value)}
+                                placeholder="URL original"
+                                disabled={editLoading}
+                                className="edit-input"
+                              />
+                              <input
+                                type="text"
+                                value={editShortenedUrl}
+                                onChange={e => setEditShortenedUrl(e.target.value)}
+                                placeholder="URL encurtada"
+                                disabled={editLoading}
+                                className="edit-input"
+                              />
+                            </div>
+                            <div className="edit-actions">
+                              <button type="submit" className="icon-btn save-btn" disabled={editLoading}>
+                                💾 Salvar
+                              </button>
+                              <button type="button" className="icon-btn cancel-btn" onClick={cancelEdit} disabled={editLoading}>
+                                ❌ Cancelar
+                              </button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={url.id}>
+                        <td>
                           <a
-                            href={`${API_BASE_URL}/${url.shortenedUrl}`}
+                            href={url.originalUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="short-url-link"
-                            title={`${API_BASE_URL}/${url.shortenedUrl}`}
+                            className="original-url"
+                            title={url.originalUrl}
                           >
-                            {url.shortenedUrl}
+                            {url.originalUrl.replace(/^https?:\/\//, '').replace('www.', '')}
                           </a>
-                          <button
-                            className="icon-btn copy-btn"
-                            title="Copiar link"
-                            aria-label="Copiar link encurtado"
-                            onClick={() => {
-                              const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
-                              navigator.clipboard.writeText(shareUrl);
-                              setCopiedId(url.id);
-                              setTimeout(() => setCopiedId(null), 1500);
-                            }}
-                          >
-                            {copiedId === url.id ? '✅' : '📋'}
-                          </button>
-                          {navigator.share && (
+                        </td>
+                        <td>
+                          <div className="short-url-container">
+                            <a
+                              href={`${API_BASE_URL}/${url.shortenedUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="short-url-link"
+                              title={`${API_BASE_URL}/${url.shortenedUrl}`}
+                            >
+                              {url.shortenedUrl}
+                            </a>
                             <button
-                              className="icon-btn share-btn"
-                              title="Compartilhar link"
-                              aria-label="Compartilhar link encurtado"
+                              className="icon-btn copy-btn"
+                              title="Copiar link"
+                              aria-label="Copiar link encurtado"
                               onClick={() => {
                                 const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
-                                navigator.share({
-                                  title: "Link encurtado",
-                                  text: "Confira este link encurtado:",
-                                  url: shareUrl,
-                                });
+                                navigator.clipboard.writeText(shareUrl);
+                                setCopiedId(url.id);
+                                setTimeout(() => setCopiedId(null), 1500);
                               }}
                             >
-                              ↗️
+                              {copiedId === url.id ? '✅' : '📋'}
                             </button>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="clicks-count">{url.clicks}</span>
-                      </td>
-                      <td>
-                        <button
-                          className="icon-btn delete-btn"
-                          aria-label="Deletar URL"
-                          title="Excluir URL"
-                          onClick={() => handleDelete(url.id)}
-                        >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
+                            {navigator.share && (
+                              <button
+                                className="icon-btn share-btn"
+                                title="Compartilhar link"
+                                aria-label="Compartilhar link encurtado"
+                                onClick={() => {
+                                  const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
+                                  navigator.share({
+                                    title: "Link encurtado",
+                                    text: "Confira este link encurtado:",
+                                    url: shareUrl,
+                                  });
+                                }}
+                              >
+                                ↗️
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="clicks-count">{url.clicks}</span>
+                        </td>
+                        <td>
+                          <button
+                            className="icon-btn edit-btn"
+                            aria-label="Editar URL"
+                            title="Editar URL"
+                            onClick={() => startEdit(url)}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="icon-btn delete-btn"
+                            aria-label="Deletar URL"
+                            title="Excluir URL"
+                            onClick={() => handleDelete(url.id)}
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    )
                   ))}
                 </tbody>
               </table>
