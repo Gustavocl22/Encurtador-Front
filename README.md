@@ -106,7 +106,6 @@ Siga este passo a passo para publicar seu próprio encurtador no GitHub Pages:
 
 ## 🔒 Segurança
 
-
 - A chave da API é lida das variáveis de ambiente do Vite.
 - O backend ASP.NET valida a chave em todas as rotas protegidas.
 
