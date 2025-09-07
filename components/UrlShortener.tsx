@@ -212,13 +212,13 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
                       <td>
                         <div className="short-url-container">
                           <a
-                            href={`https://encurtador-front-eta.vercel.app/${url.shortenedUrl}`}
+                            href={`${API_BASE_URL}/${url.shortenedUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="short-url-link"
-                            title={`https://encurtador-front-eta.vercel.app/${url.shortenedUrl}`}
+                            title={`${API_BASE_URL}/${url.shortenedUrl}`}
                           >
-                            {`https://encurtador-front-eta.vercel.app/${url.shortenedUrl}`}
+                            {url.shortenedUrl}
                           </a>
                           <button
                             className="icon-btn copy-btn"
