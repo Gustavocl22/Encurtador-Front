@@ -1,6 +1,6 @@
 # 🔗 Encurtador de URLs
 
-🔗 Acesse o encurtador online: [https://gustavocl22.github.io/Encurtador-Front/](https://gustavocl22.github.io/Encurtador-Front/)
+🔗 Acesse o encurtador online: [https://encurtador-front-eta.vercel.app](https://encurtador-front-eta.vercel.app)
 
 Este projeto é um **Encurtador de URLs** desenvolvido em React + Vite, com integração a uma API ASP.NET protegida por API Key. Permite criar, visualizar, compartilhar e deletar links encurtados, além de acompanhar o número de cliques em cada link.
 
@@ -45,7 +45,7 @@ Este projeto é um **Encurtador de URLs** desenvolvido em React + Vite, com inte
    Crie um arquivo `.env.local` na raiz do projeto com o seguinte conteúdo:
    ```
    VITE_API_URL=https://encurtarurl.onrender.com/api/urlshortener
-   VITE_X_API_KEY=sua-chave-aqui
+
    ```
    > Substitua `sua-chave-aqui` pela chave configurada no backend.
 
@@ -106,7 +106,7 @@ Siga este passo a passo para publicar seu próprio encurtador no GitHub Pages:
 
 ## 🔒 Segurança
 
-- Todas as requisições para a API são autenticadas via header `X-API-KEY`.
+
 - A chave da API é lida das variáveis de ambiente do Vite.
 - O backend ASP.NET valida a chave em todas as rotas protegidas.
 
