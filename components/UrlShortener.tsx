@@ -55,10 +55,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
 
     try {
       setLoading(true);
-  await axios.post(API_BASE_URL, { originalUrl });
-  setOriginalUrl("");
-  setSuccess("URL encurtada com sucesso!");
-  fetchUrls();
+      const response = await axios.post(API_BASE_URL, { originalUrl });
+      setOriginalUrl("");
+      setSuccess("URL encurtada com sucesso!");
+      setShortenedUrls(prev => [response.data, ...prev]);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
     } finally {
