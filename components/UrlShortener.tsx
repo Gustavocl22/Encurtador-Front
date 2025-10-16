@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import './UrlShortener.css';
 
@@ -17,6 +17,7 @@ const UrlShortenerForm: React.FC = () => {
   const [success, setSuccess] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false); // Estado separado para a tabela
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<keyof UrlShortener>("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -24,20 +25,29 @@ const UrlShortenerForm: React.FC = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
 
-  useEffect(() => {
-    fetchUrls();
-  }, []);
-
-  const fetchUrls = async () => {
+  // useCallback seguro - sem dependências problemáticas
+  const fetchUrls = useCallback(async () => {
     try {
-      setLoading(true);
+      setTableLoading(true);
       const response = await axios.get(API_BASE_URL);
       setShortenedUrls(response.data);
     } catch (err: any) {
+      console.error('Erro ao buscar URLs:', err);
       setError(err?.response?.data?.message || "Erro ao buscar URLs. Verifique sua conexão.");
     } finally {
-      setLoading(false);
+      setTableLoading(false);
     }
+  }, []); 
+
+  useEffect(() => {
+    fetchUrls();
+  }, [fetchUrls]);
+
+  const isValidUrl = (urlString: string): boolean => {
+    if (!urlString.trim()) return false;
+    
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    return urlPattern.test(urlString);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -45,21 +55,38 @@ const UrlShortenerForm: React.FC = () => {
     setError("");
     setSuccess("");
 
-    // Validação melhorada de URL
-    try {
-      new URL(originalUrl);
-    } catch (_) {
-      setError("Insira uma URL válida (ex: https://exemplo.com)");
+    // Validação básica primeiro
+    if (!originalUrl.trim()) {
+      setError("Por favor, insira uma URL");
+      return;
+    }
+
+    let urlToShorten = originalUrl.trim();
+    if (!urlToShorten.startsWith('http://') && !urlToShorten.startsWith('https://')) {
+      urlToShorten = 'https://' + urlToShorten;
+    }
+
+    if (!isValidUrl(urlToShorten)) {
+      setError("Insira uma URL válida (ex: exemplo.com ou https://exemplo.com)");
       return;
     }
 
     try {
       setLoading(true);
-      await axios.post(API_BASE_URL, { originalUrl });
+      const response = await axios.post(API_BASE_URL, { originalUrl: urlToShorten });
+      
       setOriginalUrl("");
       setSuccess("URL encurtada com sucesso!");
-      fetchUrls();
+      
+      if (response.data) {
+        setShortenedUrls(prev => [response.data, ...prev]);
+      } else {
+        setTimeout(() => {
+          fetchUrls();
+        }, 500);
+      }
     } catch (err: any) {
+      console.error('Erro ao encurtar URL:', err);
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
     } finally {
       setLoading(false);
@@ -74,9 +101,10 @@ const UrlShortenerForm: React.FC = () => {
     try {
       await axios.delete(`${API_BASE_URL}/${id}`);
       setSuccess("URL deletada com sucesso!");
-      fetchUrls();
+      setShortenedUrls(prev => prev.filter(url => url.id !== id));
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Erro ao deletar a URL. Atualize a página e tente novamente.");
+      console.error('Erro ao deletar URL:', err);
+      setError(err?.response?.data?.message || "Erro ao deletar a URL.");
     }
   };
 
@@ -89,19 +117,47 @@ const UrlShortenerForm: React.FC = () => {
     }
   };
 
-  const sortedUrls = [...shortenedUrls].sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === "asc" ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
+  const sortedUrls = useMemo(() => {
+    console.log('Ordenando URLs...', shortenedUrls.length);
+    try {
+      return [...shortenedUrls].sort((a, b) => {
+        const aValue = a[sortField];
+        const bValue = b[sortField];
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDirection === "asc" 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        
+        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    } catch (error) {
+      console.error('Erro ao ordenar URLs:', error);
+      return shortenedUrls; 
+    }
+  }, [shortenedUrls, sortField, sortDirection]);
 
-  // Paginação
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentUrls = sortedUrls.slice(indexOfFirstItem, indexOfLastItem);
+  const currentUrls = useMemo(() => {
+    try {
+      const indexOfLastItem = currentPage * itemsPerPage;
+      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+      return sortedUrls.slice(indexOfFirstItem, indexOfLastItem);
+    } catch (error) {
+      console.error('Erro na paginação:', error);
+      return [];
+    }
+  }, [sortedUrls, currentPage, itemsPerPage]);
+
   const totalPages = Math.ceil(sortedUrls.length / itemsPerPage);
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
 
   const SortIcon: React.FC<{ field: keyof UrlShortener }> = ({ field }) => {
     if (sortField !== field) return <span>↕️</span>;
@@ -114,6 +170,7 @@ const UrlShortenerForm: React.FC = () => {
         <h1>🔗 Encurtador de URLs</h1>
         <p className="subtitle">Encurte seus links longos de forma rápida e fácil</p>
 
+        
         <form onSubmit={handleSubmit} className="url-form">
           <div className="input-group">
             <input
@@ -127,7 +184,7 @@ const UrlShortenerForm: React.FC = () => {
             <button
               type="submit"
               aria-label="Encurtar URL"
-              disabled={loading || !originalUrl}
+              disabled={loading || !originalUrl.trim()}
               className={loading ? "loading" : ""}
             >
               {loading ? "⏳" : "🔗"} {loading ? "Encurtando..." : "Encurtar URL"}
@@ -140,6 +197,7 @@ const UrlShortenerForm: React.FC = () => {
             <span>⚠️</span> {error}
           </div>
         )}
+        
         {success && (
           <div className="message success-message">
             <span>✅</span> {success}
@@ -153,14 +211,19 @@ const UrlShortenerForm: React.FC = () => {
           {shortenedUrls.length > 0 && (
             <div className="table-controls">
               <span className="results-count">{shortenedUrls.length} resultado(s)</span>
-              <button onClick={fetchUrls} className="refresh-btn" title="Atualizar lista">
-                🔄
+              <button 
+                onClick={fetchUrls} 
+                className="refresh-btn" 
+                title="Atualizar lista"
+                disabled={tableLoading}
+              >
+                {tableLoading ? "⏳" : "🔄"}
               </button>
             </div>
           )}
         </div>
 
-        {loading && shortenedUrls.length === 0 ? (
+        {tableLoading && shortenedUrls.length === 0 ? (
           <div className="loading-state">
             <div className="spinner"></div>
             <p>Carregando URLs...</p>
@@ -206,7 +269,10 @@ const UrlShortenerForm: React.FC = () => {
                           className="original-url"
                           title={url.originalUrl}
                         >
-                          {url.originalUrl.replace(/^https?:\/\//, '').replace('www.', '')}
+                          {url.originalUrl.length > 50 
+                            ? url.originalUrl.substring(0, 50) + '...'
+                            : url.originalUrl
+                          }
                         </a>
                       </td>
                       <td>
@@ -216,14 +282,12 @@ const UrlShortenerForm: React.FC = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="short-url-link"
-                            title={`${API_BASE_URL}/${url.shortenedUrl}`}
                           >
                             {url.shortenedUrl}
                           </a>
                           <button
                             className="icon-btn copy-btn"
                             title="Copiar link"
-                            aria-label="Copiar link encurtado"
                             onClick={() => {
                               const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
                               navigator.clipboard.writeText(shareUrl);
@@ -233,23 +297,6 @@ const UrlShortenerForm: React.FC = () => {
                           >
                             {copiedId === url.id ? '✅' : '📋'}
                           </button>
-                          {navigator.share && (
-                            <button
-                              className="icon-btn share-btn"
-                              title="Compartilhar link"
-                              aria-label="Compartilhar link encurtado"
-                              onClick={() => {
-                                const shareUrl = `${API_BASE_URL}/${url.shortenedUrl}`;
-                                navigator.share({
-                                  title: "Link encurtado",
-                                  text: "Confira este link encurtado:",
-                                  url: shareUrl,
-                                });
-                              }}
-                            >
-                              ↗️
-                            </button>
-                          )}
                         </div>
                       </td>
                       <td>
@@ -258,7 +305,6 @@ const UrlShortenerForm: React.FC = () => {
                       <td>
                         <button
                           className="icon-btn delete-btn"
-                          aria-label="Deletar URL"
                           title="Excluir URL"
                           onClick={() => handleDelete(url.id)}
                         >
@@ -301,6 +347,12 @@ const UrlShortenerForm: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {tableLoading && shortenedUrls.length > 0 && (
+          <div className="table-loading-overlay">
+            <div className="spinner"></div>
+          </div>
         )}
       </div>
     </div>
