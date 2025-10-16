@@ -22,7 +22,7 @@ const UrlShortenerForm: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const itemsPerPage = 5;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrender.com/api/urlshortener";
 
   useEffect(() => {
     fetchUrls();
@@ -31,8 +31,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
   const fetchUrls = async () => {
     try {
       setLoading(true);
-  const response = await axios.get(API_BASE_URL);
-  setShortenedUrls(response.data);
+      const response = await axios.get(API_BASE_URL);
+      setShortenedUrls(response.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao buscar URLs. Verifique sua conexão.");
     } finally {
@@ -55,10 +55,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
 
     try {
       setLoading(true);
-      const response = await axios.post(API_BASE_URL, { originalUrl });
+      await axios.post(API_BASE_URL, { originalUrl });
       setOriginalUrl("");
       setSuccess("URL encurtada com sucesso!");
-      setShortenedUrls(prev => [response.data, ...prev]);
+      fetchUrls();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
     } finally {
@@ -72,9 +72,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://encurtarurl.onrend
     }
 
     try {
-  await axios.delete(`${API_BASE_URL}/${id}`);
-  setSuccess("URL deletada com sucesso!");
-  fetchUrls();
+      await axios.delete(`${API_BASE_URL}/${id}`);
+      setSuccess("URL deletada com sucesso!");
+      fetchUrls();
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao deletar a URL. Atualize a página e tente novamente.");
     }
