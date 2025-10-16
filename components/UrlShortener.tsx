@@ -55,10 +55,10 @@ const UrlShortenerForm: React.FC = () => {
 
     try {
       setLoading(true);
-      await axios.post(API_BASE_URL, { originalUrl });
+      const response = await axios.post(API_BASE_URL, { originalUrl });
       setOriginalUrl("");
       setSuccess("URL encurtada com sucesso!");
-      fetchUrls();
+      setShortenedUrls(prev => [response.data, ...prev]);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao encurtar a URL. Tente novamente.");
     } finally {
@@ -72,9 +72,11 @@ const UrlShortenerForm: React.FC = () => {
     }
 
     try {
+      setLoading(true);
       await axios.delete(`${API_BASE_URL}/${id}`);
       setSuccess("URL deletada com sucesso!");
-      fetchUrls();
+      setShortenedUrls(prev => prev.filter(url => url.id !== id));
+      setLoading(false);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Erro ao deletar a URL. Atualize a página e tente novamente.");
     }
