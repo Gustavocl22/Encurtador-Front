@@ -349,6 +349,7 @@ const UrlShortenerForm: React.FC = () => {
           </>
         )}
 
+        
         {tableLoading && shortenedUrls.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
